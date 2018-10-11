@@ -104,6 +104,10 @@ public class CommonClientConfigs {
         + "which will try to refresh metadata by choosing from existing resolved node set, this config will force resolving "
         + "the bootstrap url again to get new node set and use the new node set to send update metadata request";
 
+    public static final String CLIENT_DNS_LOOKUP_CONFIG = "client.dns.lookup";
+    public static final String CLIENT_DNS_LOOKUP_DOC = "<p>Controls how the client uses DNS lookups.</p><p>If set to <code>use_all_dns_ips</code> then, when the lookup returns multiple IP addresses for a hostname,"
+                                                        + " they will all be attempted to connect to before failing the connection. Applies to both bootstrap and advertised servers.</p>";
+
     /**
      * Postprocess the configuration so that exponential backoff is disabled when reconnect backoff
      * is explicitly configured but the maximum reconnect backoff is not explicitly configured.
