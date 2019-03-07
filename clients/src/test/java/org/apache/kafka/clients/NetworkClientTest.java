@@ -135,6 +135,12 @@ public class NetworkClientTest {
     }
 
     @Test
+    public void testDnsLookupFailure() {
+        /* Fail cleanly when the node has a bad hostname */
+        assertFalse(client.ready(new Node(1234, "badhost", 1234), time.milliseconds()));
+    }
+
+    @Test
     public void testClose() {
         client.ready(node, time.milliseconds());
         awaitReady(client, node);

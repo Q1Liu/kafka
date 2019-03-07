@@ -289,7 +289,7 @@ public class NetworkClient implements KafkaClient {
         this.selector = selector;
         this.clientId = clientId;
         this.inFlightRequests = new InFlightRequests(maxInFlightRequestsPerConnection);
-        this.connectionStates = new ClusterConnectionStates(reconnectBackoffMs, reconnectBackoffMax);
+        this.connectionStates = new ClusterConnectionStates(reconnectBackoffMs, reconnectBackoffMax, logContext);
         this.socketSendBuffer = socketSendBuffer;
         this.socketReceiveBuffer = socketReceiveBuffer;
         this.correlation = 0;
@@ -954,23 +954,25 @@ public class NetworkClient implements KafkaClient {
 
     /**
      * Initiate a connection to the given node
+     * @param node the node to connect to
+     * @param now current time in epoch milliseconds
      */
     private void initiateConnect(Node node, long now) {
         String nodeConnectionId = node.idString();
         try {
-            this.connectionStates.connecting(nodeConnectionId, now, node.host(), clientDnsLookup);
-            InetAddress address = this.connectionStates.currentAddress(nodeConnectionId);
+            connectionStates.connecting(nodeConnectionId, now, node.host(), clientDnsLookup);
+            InetAddress address = connectionStates.currentAddress(nodeConnectionId);
             log.debug("Initiating connection to node {} using address {}", node, address);
             selector.connect(nodeConnectionId,
                     new InetSocketAddress(address, node.port()),
                     this.socketSendBuffer,
                     this.socketReceiveBuffer);
         } catch (IOException e) {
+            log.warn("Error connecting to node {}", node, e);
             /* attempt failed, we'll try again after the backoff */
             connectionStates.disconnected(nodeConnectionId, now);
             /* maybe the problem is our metadata, update it */
             metadataUpdater.requestUpdate();
-            log.warn("Error connecting to node {}", node, e);
         }
     }
 
