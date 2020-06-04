@@ -75,7 +75,7 @@ public class ClientUtilsTest {
 
     @Test(expected = UnknownHostException.class)
     public void testResolveUnknownHostException() throws UnknownHostException {
-        ClientUtils.resolve("some.invalid.hostname.foo.bar.local", ClientDnsLookup.DEFAULT);
+        ClientUtils.resolve("some.invalid.hostname.foo.bar.local", ClientDnsLookup.USE_ALL_DNS_IPS);
     }
 
     @Test
@@ -86,6 +86,7 @@ public class ClientUtilsTest {
     @Test
     @Ignore
     public void testResolveDnsLookupAllIps() throws UnknownHostException {
+        // Note that kafka.apache.org resolves to 2 IP addresses
         assertEquals(2, ClientUtils.resolve("kafka.apache.org", ClientDnsLookup.USE_ALL_DNS_IPS).size());
     }
 

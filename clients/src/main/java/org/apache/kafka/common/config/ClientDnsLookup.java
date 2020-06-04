@@ -23,7 +23,7 @@ public enum ClientDnsLookup {
     DEFAULT("default"),
     USE_ALL_DNS_IPS("use_all_dns_ips");
 
-    private String clientDnsLookup;
+    private final String clientDnsLookup;
 
     ClientDnsLookup(String clientDnsLookup) {
         this.clientDnsLookup = clientDnsLookup;

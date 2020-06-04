@@ -278,10 +278,10 @@ public class WorkerConfig extends AbstractConfig {
                         Importance.LOW, REST_EXTENSION_CLASSES_DOC)
                 .define(CommonClientConfigs.CLIENT_DNS_LOOKUP_CONFIG,
                         Type.STRING,
-                        ClientDnsLookup.DEFAULT.toString(),
+                        ClientDnsLookup.USE_ALL_DNS_IPS.toString(),
                         in(ClientDnsLookup.DEFAULT.toString(), ClientDnsLookup.USE_ALL_DNS_IPS.toString()),
                         Importance.MEDIUM,
-                        CommonClientConfigs.CLIENT_DNS_LOOKUP_DOC);    
+                        CommonClientConfigs.CLIENT_DNS_LOOKUP_DOC);
     }
 
     private void logInternalConverterDeprecationWarnings(Map<String, String> props) {
