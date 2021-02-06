@@ -31,6 +31,7 @@ import org.apache.kafka.common.config.ClientDnsLookup;
 import org.apache.kafka.common.errors.AuthenticationException;
 import org.apache.kafka.common.utils.MockTime;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ClusterConnectionStatesTest {
@@ -252,6 +253,7 @@ public class ClusterConnectionStatesTest {
         assertSame(currAddress, connectionStates.currentAddress(nodeId1));
     }
 
+    @Ignore
     @Test
     public void testMultipleIPsWithDefault() throws UnknownHostException {
         assertEquals(2, ClientUtils.resolve(hostTwoIps, ClientDnsLookup.USE_ALL_DNS_IPS).size());
@@ -262,6 +264,7 @@ public class ClusterConnectionStatesTest {
         assertSame(currAddress, connectionStates.currentAddress(nodeId1));
     }
 
+    @Ignore
     @Test
     public void testMultipleIPsWithUseAll() throws UnknownHostException {
         assertEquals(2, ClientUtils.resolve(hostTwoIps, ClientDnsLookup.USE_ALL_DNS_IPS).size());
