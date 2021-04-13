@@ -506,11 +506,6 @@ public class ConsumerConfig extends AbstractConfig {
                                         CommonClientConfigs.DEFAULT_SECURITY_PROTOCOL,
                                         Importance.MEDIUM,
                                         CommonClientConfigs.SECURITY_PROTOCOL_DOC)
-                                .define(CommonClientConfigs.ENABLE_STICKY_METADATA_FETCH_CONFIG,
-                                        Type.BOOLEAN,
-                                        false,
-                                        Importance.MEDIUM,
-                                        CommonClientConfigs.ENABLE_STICKY_METADATA_FETCH_DOC)
                                 .define(ConsumerConfig.POOL_CLASS_NAME_CONFIG,
                                         Type.CLASS,
                                         null,

@@ -18,7 +18,6 @@ package org.apache.kafka.clients.consumer;
 
 import org.apache.kafka.clients.ApiVersions;
 import org.apache.kafka.clients.ClientUtils;
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.Metadata;
 import org.apache.kafka.clients.NetworkClient;
 import org.apache.kafka.clients.consumer.internals.ConsumerCoordinator;
@@ -744,7 +743,6 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
                     throttleTimeSensor,
                     logContext,
                     config.getList(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
-            netClient.setEnableStickyMetadataFetch(config.getBoolean(CommonClientConfigs.ENABLE_STICKY_METADATA_FETCH_CONFIG));
             netClient.setEnableClientResponseWithFinalize(config.getBoolean(ConsumerConfig.ENABLE_CLIENT_RESPONSE_LEAK_CHECK));
             this.client = new ConsumerNetworkClient(logContext, netClient, metadata, time, retryBackoffMs,
                 config.getInt(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG), heartbeatIntervalMs); //Will avoid blocking an extended period of time to prevent heartbeat thread starvation
