@@ -155,8 +155,9 @@ public final class Metadata implements Closeable {
      * has been set by receiving stale metadata from a different cluster
      */
     public synchronized boolean shouldUpdateClusterMetadataFromBootstrap(long nowMs) {
-        return (this.nodesTriedSinceLastSuccessfulRefresh >= 1 &&
-            this.lastSuccessfulRefreshMs + this.maxClusterMetadataExpireTimeMs <= nowMs) ||
+        return this.maxClusterMetadataExpireTimeMs > 0 &&
+            (this.nodesTriedSinceLastSuccessfulRefresh >= 1 &&
+            (this.lastRefreshMs != 0 && this.maxClusterMetadataExpireTimeMs <= nowMs - this.lastSuccessfulRefreshMs)) ||
             this.forceClusterMetadataUpdateFromBootstrap;
     }
 
