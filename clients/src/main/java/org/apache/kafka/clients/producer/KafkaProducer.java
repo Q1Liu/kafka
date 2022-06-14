@@ -430,6 +430,7 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
                     ClientDnsLookup.forConfig(producerConfig.getString(CommonClientConfigs.CLIENT_DNS_LOOKUP_CONFIG)),
                     time, true, apiVersions,
                     throttleTimeSensor, logContext, producerConfig.getList(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG));
+                networkClient.setEnableStickyMetadataFetch(config.getBoolean(CommonClientConfigs.ENABLE_STICKY_METADATA_FETCH_CONFIG));
                 client = networkClient;
             }
             this.sender = new Sender(logContext,
