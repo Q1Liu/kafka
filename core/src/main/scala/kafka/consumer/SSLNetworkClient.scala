@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit
 
 import org.apache.kafka.clients._
 import org.apache.kafka.common.Node
+import org.apache.kafka.common.config.ClientDnsLookup
 import org.apache.kafka.common.metrics.{JmxReporter, MetricConfig, Metrics, MetricsReporter}
 import org.apache.kafka.common.network.{ChannelBuilders, NetworkReceive, Selectable, Selector => KSelector}
 import org.apache.kafka.common.protocol.ApiKeys
@@ -77,6 +78,7 @@ class SSLNetworkClient(config: ConsumerConfig, metadataUpdater: ManualMetadataUp
       Selectable.USE_DEFAULT_BUFFER_SIZE,
       config.socketReceiveBufferBytes,
       socketTimeoutMs,
+      ClientDnsLookup.DEFAULT,
       time,
       true,
       new ApiVersions,
