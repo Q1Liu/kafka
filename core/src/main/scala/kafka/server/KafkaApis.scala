@@ -88,6 +88,8 @@ import scala.collection.{Map, Seq, Set, immutable, mutable}
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
+object MetadataRequestHijackLogger extends Logging {
+}
 
 /**
  * Logic to handle the various Kafka requests
@@ -120,6 +122,9 @@ class KafkaApis(val requestChannel: RequestChannel,
   val requestHelper = new RequestHandlerHelper(requestChannel, quotas, time)
   val aclApis = new AclApis(authHelper, authorizer, requestHelper, "broker", config)
 
+  val topicsToHijackLoggingOnMdRequest =
+    Option[util.List[String]](config.getList(KafkaConfig.TopicsToHijackForMdReqLogging))
+      .getOrElse(new util.ArrayList[String]()).asScala.toSet
   val unofficialClientsCache: LoadingCache[String, String] = CacheBuilder.newBuilder()
     .expireAfterWrite(config.unofficialClientCacheTtl, TimeUnit.HOURS)
     .build(
@@ -1226,6 +1231,13 @@ class KafkaApis(val requestChannel: RequestChannel,
     val metadataRequest = request.body[MetadataRequest]
     val requestVersion = request.header.apiVersion
 
+    val shouldHijackForLog =
+      !metadataRequest.isAllTopics && metadataRequest.topics().asScala.toSet.intersect(topicsToHijackLoggingOnMdRequest).nonEmpty
+
+    if (shouldHijackForLog) {
+      MetadataRequestHijackLogger.debug(s"MD req coming in: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
+    }
+
     // Topic IDs are not supported for versions 10 and 11. Topic names can not be null in these versions.
     if (!metadataRequest.isAllTopics) {
       metadataRequest.data.topics.forEach{ topic =>
@@ -1312,7 +1324,10 @@ class KafkaApis(val requestChannel: RequestChannel,
     trace("Sending topic metadata %s and brokers %s for correlation id %d to client %s".format(completeTopicMetadata.mkString(","),
       brokers.mkString(","), request.header.correlationId, request.header.clientId))
 
-    requestHelper.sendResponseMaybeThrottle(request, requestThrottleMs =>
+    requestHelper.sendResponseMaybeThrottle(request, requestThrottleMs => {
+       if (shouldHijackForLog) {
+         MetadataRequestHijackLogger.debug(s"Respond MD req to: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
+       }
        MetadataResponse.prepareResponse(
          requestVersion,
          requestThrottleMs,
@@ -1321,7 +1336,8 @@ class KafkaApis(val requestChannel: RequestChannel,
          metadataSupport.controllerId.getOrElse(MetadataResponse.NO_CONTROLLER_ID),
          completeTopicMetadata.asJava,
          clusterAuthorizedOperations
-      ))
+       )
+    })
   }
 
   /**
