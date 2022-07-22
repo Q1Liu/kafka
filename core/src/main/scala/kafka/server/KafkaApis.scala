@@ -18,6 +18,7 @@
 package kafka.server
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import com.typesafe.scalalogging.Logger
 import kafka.admin.AdminUtils
 import kafka.api.{ApiVersion, ElectLeadersRequestOps, KAFKA_0_11_0_IV0, KAFKA_2_3_IV0}
 import kafka.common.OffsetAndMetadata
@@ -88,7 +89,11 @@ import scala.collection.{Map, Seq, Set, immutable, mutable}
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
-object MetadataRequestHijackLogger extends Logging {
+object MetadataRequestHijackLogger {
+  private val logger = Logger("metadata.request.hijack.logger")
+}
+class MetadataRequestHijackLogger extends Logging {
+  override lazy val logger = MetadataRequestHijackLogger.logger
 }
 
 /**
@@ -122,6 +127,7 @@ class KafkaApis(val requestChannel: RequestChannel,
   val requestHelper = new RequestHandlerHelper(requestChannel, quotas, time)
   val aclApis = new AclApis(authHelper, authorizer, requestHelper, "broker", config)
 
+  val metadataRequestHijackLogger = new MetadataRequestHijackLogger()
   val topicsToHijackLoggingOnMdRequest =
     Option[util.List[String]](config.getList(KafkaConfig.TopicsToHijackForMdReqLoggingProp))
       .getOrElse(new util.ArrayList[String]()).asScala.toSet
@@ -1235,7 +1241,7 @@ class KafkaApis(val requestChannel: RequestChannel,
       !metadataRequest.isAllTopics && metadataRequest.topics().asScala.toSet.intersect(topicsToHijackLoggingOnMdRequest).nonEmpty
 
     if (shouldHijackForLog) {
-      MetadataRequestHijackLogger.debug(s"MD req coming in: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
+      metadataRequestHijackLogger.debug(s"MD req coming in: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
     }
 
     // Topic IDs are not supported for versions 10 and 11. Topic names can not be null in these versions.
@@ -1326,7 +1332,7 @@ class KafkaApis(val requestChannel: RequestChannel,
 
     requestHelper.sendResponseMaybeThrottle(request, requestThrottleMs => {
        if (shouldHijackForLog) {
-         MetadataRequestHijackLogger.debug(s"Respond MD req to: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
+         metadataRequestHijackLogger.debug(s"Respond MD req to: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
        }
        MetadataResponse.prepareResponse(
          requestVersion,
