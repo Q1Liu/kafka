@@ -123,7 +123,7 @@ class KafkaApis(val requestChannel: RequestChannel,
   val aclApis = new AclApis(authHelper, authorizer, requestHelper, "broker", config)
 
   val topicsToHijackLoggingOnMdRequest =
-    Option[util.List[String]](config.getList(KafkaConfig.TopicsToHijackForMdReqLogging))
+    Option[util.List[String]](config.getList(KafkaConfig.TopicsToHijackForMdReqLoggingProp))
       .getOrElse(new util.ArrayList[String]()).asScala.toSet
   val unofficialClientsCache: LoadingCache[String, String] = CacheBuilder.newBuilder()
     .expireAfterWrite(config.unofficialClientCacheTtl, TimeUnit.HOURS)

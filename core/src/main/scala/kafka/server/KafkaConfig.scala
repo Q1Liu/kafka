@@ -410,7 +410,7 @@ object KafkaConfig {
   val RequestTimeoutMsProp = CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG
   val ConnectionSetupTimeoutMsProp = CommonClientConfigs.SOCKET_CONNECTION_SETUP_TIMEOUT_MS_CONFIG
   val ConnectionSetupTimeoutMaxMsProp = CommonClientConfigs.SOCKET_CONNECTION_SETUP_TIMEOUT_MAX_MS_CONFIG
-  val TopicsToHijackForMdReqLogging = "topics.to.hijack.for.metadata.request.logging"
+  val TopicsToHijackForMdReqLoggingProp = "topics.to.hijack.for.metadata.request.logging"
 
   /** KRaft mode configs */
   val ProcessRolesProp = "process.roles"
@@ -1175,7 +1175,7 @@ object KafkaConfig {
       .define(RequestTimeoutMsProp, INT, Defaults.RequestTimeoutMs, HIGH, RequestTimeoutMsDoc)
       .define(ConnectionSetupTimeoutMsProp, LONG, Defaults.ConnectionSetupTimeoutMs, MEDIUM, ConnectionSetupTimeoutMsDoc)
       .define(ConnectionSetupTimeoutMaxMsProp, LONG, Defaults.ConnectionSetupTimeoutMaxMs, MEDIUM, ConnectionSetupTimeoutMaxMsDoc)
-      .define(TopicsToHijackForMdReqLogging, LIST, null, LOW, "Just a hacky hijack")
+      .define(TopicsToHijackForMdReqLoggingProp, LIST, null, LOW, "Just a hacky hijack")
 
       /*
        * KRaft mode configs.

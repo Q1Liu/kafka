@@ -602,7 +602,7 @@ class KafkaConfigTest {
         case KafkaConfig.ZkSslTrustStoreTypeProp =>  //ignore string
         case KafkaConfig.ZkSslProtocolProp =>  //ignore string
         case KafkaConfig.ZkSslEnabledProtocolsProp =>  //ignore string
-        case KafkaConfig.TopicsToHijackForMdReqLogging => //ignore string
+        case KafkaConfig.TopicsToHijackForMdReqLoggingProp => //ignore string
         case KafkaConfig.ZkSslCipherSuitesProp =>  //ignore string
         case KafkaConfig.ZkSslEndpointIdentificationAlgorithmProp => //ignore string
         case KafkaConfig.ZkSslCrlEnableProp => assertPropertyInvalid(baseProperties, name, "not_a_boolean")
