@@ -1241,7 +1241,7 @@ class KafkaApis(val requestChannel: RequestChannel,
       !metadataRequest.isAllTopics && metadataRequest.topics().asScala.toSet.intersect(topicsToHijackLoggingOnMdRequest).nonEmpty
 
     if (shouldHijackForLog) {
-      metadataRequestHijackLogger.debug(s"MD req coming in: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
+      metadataRequestHijackLogger.info(s"MD req coming in: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
     }
 
     // Topic IDs are not supported for versions 10 and 11. Topic names can not be null in these versions.
@@ -1332,7 +1332,7 @@ class KafkaApis(val requestChannel: RequestChannel,
 
     requestHelper.sendResponseMaybeThrottle(request, requestThrottleMs => {
        if (shouldHijackForLog) {
-         metadataRequestHijackLogger.debug(s"Respond MD req to: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
+         metadataRequestHijackLogger.info(s"Respond MD req to: clientId=${request.context.clientId()}, correlationId=${request.context.correlationId()}, principal=${request.context.principal()}")
        }
        MetadataResponse.prepareResponse(
          requestVersion,
