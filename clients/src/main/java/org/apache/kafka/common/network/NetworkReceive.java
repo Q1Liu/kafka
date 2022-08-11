@@ -118,6 +118,7 @@ public class NetworkReceive implements Receive {
     @Deprecated
     public long readFromReadableChannel(ReadableByteChannel channel) throws IOException {
         int read = 0;
+        log.trace("readFromReadableChannel with size.hasRemaining {}, limit {}", size.hasRemaining(), size.limit());
         if (size.hasRemaining()) {
             int bytesRead = channel.read(size);
             if (bytesRead < 0)
@@ -148,6 +149,8 @@ public class NetworkReceive implements Receive {
             read += bytesRead;
         }
 
+        log.trace("readFromReadableChannel read {} bytes of data, is read complete {} with size.hasRemaining {}, "
+            + " buffer empty {}, buffer hasRemaining {}", read, complete(), size.hasRemaining(), buffer != null, buffer.hasRemaining());
         return read;
     }
 
