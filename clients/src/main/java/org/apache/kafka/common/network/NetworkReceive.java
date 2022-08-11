@@ -153,7 +153,8 @@ public class NetworkReceive implements Receive {
         }
 
         log.trace("readFromReadableChannel read {} bytes of data, is read complete {} with size.hasRemaining {}, "
-            + " buffer empty {}, buffer hasRemaining {}", read, complete(), size.hasRemaining(), buffer != null, buffer.hasRemaining());
+            + " buffer not empty {}, buffer hasRemaining {}", read, complete(), size.hasRemaining(), buffer != null,
+            buffer != null ? buffer.remaining() : 0);
         return read;
     }
 
