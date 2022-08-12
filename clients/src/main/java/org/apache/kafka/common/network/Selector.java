@@ -466,7 +466,8 @@ public class Selector implements Selectable, AutoCloseable {
         long startSelect = time.nanoseconds();
         int numReadyKeys = select(timeout);
         long endSelect = time.nanoseconds();
-        log.trace("Completed select in " + (endSelect - startSelect) + "ns");
+        log.trace("Completed select in {}ns, with numReadyKeys {}, immediatelyConnectedKeys.isEmpty {}, dataInBuffers {}",
+            endSelect - startSelect, numReadyKeys, immediatelyConnectedKeys.isEmpty(), dataInBuffers);
         this.sensors.selectTime.record(endSelect - startSelect, time.milliseconds());
 
 
