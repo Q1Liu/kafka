@@ -385,7 +385,7 @@ public class FetchSessionHandler {
             if (response.error() == Errors.FETCH_SESSION_ID_NOT_FOUND) {
                 log.debug("Node {} was unable to process the fetch request with {} due to a cache miss. " +
                     "This client will reset the fetch session. " +
-                    "This is not an error, bit may indicate a sub-optimal broker configuration.",
+                    "This is not an error, but may indicate a sub-optimal broker configuration.",
                     node, nextMetadata);
                 nextMetadata = FetchMetadata.INITIAL;
             } else {
