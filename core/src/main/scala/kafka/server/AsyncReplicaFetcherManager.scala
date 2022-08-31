@@ -30,7 +30,9 @@ class AsyncReplicaFetcherManager(brokerConfig: KafkaConfig,
       extends AsyncAbstractFetcherManager[FetcherEventManager](
         name = "ReplicaFetcherManager on broker " + brokerConfig.brokerId,
         clientId = "Replica",
-        numFetchers = brokerConfig.numReplicaFetchers) {
+        numFetchers = brokerConfig.numReplicaFetchers,
+        time = time
+      ) {
 
   override def createFetcherThread(fetcherId: Int, sourceBroker: BrokerEndPoint): FetcherEventManager = {
     val prefix = threadNamePrefix.map(tp => s"$tp:").getOrElse("")
