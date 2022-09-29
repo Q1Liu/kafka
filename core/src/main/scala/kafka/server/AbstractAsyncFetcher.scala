@@ -61,7 +61,7 @@ case class RemovePartitions(topicPartitions: Set[TopicPartition], future: KafkaF
   override def state = FetcherState.RemovePartitions
 }
 
-case class GetPartitionCount(future: KafkaFutureImpl[Int]) extends FetcherEvent {
+case class GetPartitionCount(future: KafkaFutureImpl[Int], eventCreateTimeMs: Option[Long] = None) extends FetcherEvent {
   override def priority = 2
   override def state = FetcherState.GetPartitionCount
 }
@@ -185,7 +185,11 @@ abstract class AbstractAsyncFetcher(name: String,
         future.complete(null)
       case RemovePartitions(topicPartitions, future) =>
         future.complete(removePartitions(topicPartitions))
-      case GetPartitionCount(future) =>
+      case GetPartitionCount(future, eventCreateTimeMs) =>
+        eventCreateTimeMs match {
+          case Some(eventCreateTimeMs) =>
+            info(s"GetPartitionCount completed in ${System.currentTimeMillis() - eventCreateTimeMs}ms")
+        }
         future.complete(partitionStates.size())
       case TruncateAndFetch =>
         truncateAndFetch()

@@ -210,13 +210,17 @@ abstract class AsyncAbstractFetcherManager[T <: FetcherEventManager](val name: S
       for ((key, fetcher) <- fetcherThreadMap) {
         futures.put(key, fetcher.getPartitionsCount())
       }
-
+      val closeLoopBeginMs = time.milliseconds()
       for ((key, partitionCountFuture) <- futures) {
         if (partitionCountFuture.get() == 0) {
-          fetcherThreadMap(key).close()
+          val threadCloseBeginMs = time.milliseconds()
+          val thread: FetcherEventManager = fetcherThreadMap(key)
+          thread.close()
+          info(s"Closed fetcher thread `${thread.name}` in ${time.milliseconds() - threadCloseBeginMs}ms")
           fetcherThreadMap -= key
         }
       }
+      info(s"Finished shutdown fetcher thread loop in ${time.milliseconds() - closeLoopBeginMs}ms")
     }
   }
 

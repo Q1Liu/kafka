@@ -62,7 +62,7 @@ class FetcherEventManagerTest {
           case RemovePartitions(topicPartitions, future) =>
             removePartitionsProcessed += 1
             future.complete(null)
-          case GetPartitionCount(future) =>
+          case GetPartitionCount(future, eventCreateTimeMs) =>
             getPartitionsProcessed += 1
             future.complete(1)
           case TruncateAndFetch =>

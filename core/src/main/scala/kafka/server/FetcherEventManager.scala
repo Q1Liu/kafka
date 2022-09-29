@@ -51,7 +51,7 @@ object FetcherEventManager {
  * @param processor
  * @param time
  */
-class FetcherEventManager(name: String,
+class FetcherEventManager(val name: String,
                           fetcherEventBus: FetcherEventBus,
                           processor: FetcherEventProcessor,
                           time: Time) extends FetcherTrait with KafkaMetricsGroup {
@@ -113,7 +113,7 @@ class FetcherEventManager(name: String,
 
   def getPartitionsCount(): KafkaFuture[Int] = {
     val future = new KafkaFutureImpl[Int]{}
-    fetcherEventBus.put(GetPartitionCount(future))
+    fetcherEventBus.put(GetPartitionCount(future, Some(time.milliseconds())))
     future
   }
 
@@ -126,7 +126,9 @@ class FetcherEventManager(name: String,
 
   def initiateShutdown(): Unit = {
     thread.initiateShutdown()
+    val begin = time.milliseconds()
     fetcherEventBus.close()
+    info(s"Closed fetcherEventBus in ${time.milliseconds() - begin}ms")
   }
 
   def awaitShutdown(): Unit = {
@@ -142,8 +144,12 @@ class FetcherEventManager(name: String,
   }
 
   def close(): Unit = {
+    val beginInitiateShutdown = time.milliseconds()
     initiateShutdown()
+    info(s"Finished initiateShutdown in ${time.milliseconds() - beginInitiateShutdown}ms")
+    val beginAwaitShutdown = time.milliseconds()
     awaitShutdown()
+    info(s"Finished awaitShutdown in ${time.milliseconds() - beginAwaitShutdown}ms")
   }
 
   class FetcherEventThread(name: String) extends ShutdownableThread(name = name, isInterruptible = false) {
