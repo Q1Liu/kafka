@@ -21,18 +21,21 @@ import java.nio.file.{Files, NoSuchFileException}
 import java.nio.file.attribute.FileTime
 import java.util.concurrent.TimeUnit
 import kafka.common.LogSegmentOffsetOverflowException
+import kafka.log.Log.UnknownOffset
 import kafka.metrics.{KafkaMetricsGroup, KafkaTimer}
 import kafka.server.epoch.LeaderEpochFileCache
 import kafka.server.{FetchDataInfo, LogOffsetMetadata}
 import kafka.utils._
 import org.apache.kafka.common.InvalidRecordException
 import org.apache.kafka.common.errors.CorruptRecordException
+import org.apache.kafka.common.record.FileLogInputStream.FileChannelRecordBatch
 import org.apache.kafka.common.record.FileRecords.{LogOffsetPosition, TimestampAndOffset}
 import org.apache.kafka.common.record._
 import org.apache.kafka.common.utils.{BufferSupplier, Time}
 
 import scala.jdk.CollectionConverters._
 import scala.math._
+import scala.util.control.Breaks.break
 
 /**
  * A segment of the log. Each segment has two components: a log and an index. The log is a FileRecords containing
@@ -413,17 +416,47 @@ class LogSegment private[log] (val log: FileRecords,
     ")"
 
   /**
+   * A wrapped object to represent the result of {@link LogSegment#truncateTo}
+   *
+   * @param bytesTruncated
+   * @param offsetTruncatedTo The offset segment is truncated to.
+   *                          If the method performed no truncation (when offset is larger than the segment's last message),
+   *                          it's a None
+   */
+  case class SegmentTruncationResult(bytesTruncated: Long, messagesTruncated: Long, offsetTruncatedTo: Long)
+
+  /**
    * Truncate off all index and log entries with offsets >= the given offset.
    * If the given offset is larger than the largest message in this segment, do nothing.
    *
    * @param offset The offset to truncate to
-   * @return The number of log bytes truncated
+   * @return SegmentTruncationResult containing the number of log bytes truncated and the offset after truncate,
+   *         which may differ from the offset parameter because log segment truncation must be performed over a batch
    */
   @nonthreadsafe
-  def truncateTo(offset: Long): Int = {
+  def truncateTo(offset: Long): SegmentTruncationResult = {
     // Do offset translation before truncating the index to avoid needless scanning
     // in case we truncate the full index
-    val mapping = translateOffset(offset)
+    var batch: FileChannelRecordBatch = null
+    var curr: FileChannelRecordBatch = null
+    val startingPositionToSearch = max(offsetIndex.lookup(offset).position, 0)
+    val batchIterator = log.batchesFrom(startingPositionToSearch).iterator()
+    while (batchIterator.hasNext) {
+      // Although for the offset purpose, we only need the first batch that lastOffset >= Offset,
+      // but we still need to iterate to the last batch to find out exact end offset.
+      curr = batchIterator.next()
+      if (batch == null && curr.lastOffset() >= offset) {
+        batch = curr;
+      }
+    }
+
+    // The offset methods from the DefaultFileRecordBatch object cannot be invoked multiple times as they're backed by file streams,
+    // Need to cache them here
+    val segmentNextOffset = if (curr == null) UnknownOffset
+                            else curr.nextOffset()
+    val batchBaseOffset = if (batch == null) UnknownOffset
+                          else batch.baseOffset()
+
     offsetIndex.truncateTo(offset)
     timeIndex.truncateTo(offset)
     txnIndex.truncateTo(offset)
@@ -432,7 +465,7 @@ class LogSegment private[log] (val log: FileRecords,
     offsetIndex.resize(offsetIndex.maxIndexSize)
     timeIndex.resize(timeIndex.maxIndexSize)
 
-    val bytesTruncated = if (mapping == null) 0 else log.truncateTo(mapping.position)
+    val bytesTruncated = if (batch == null) 0 else log.truncateTo(batch.position())
     if (log.sizeInBytes == 0) {
       created = time.milliseconds
       rollingBasedTimestamp = None
@@ -441,7 +474,12 @@ class LogSegment private[log] (val log: FileRecords,
     bytesSinceLastIndexEntry = 0
     if (maxTimestampSoFar >= 0)
       loadLargestTimestamp()
-    bytesTruncated
+    SegmentTruncationResult(bytesTruncated = bytesTruncated,
+                            messagesTruncated = if (batchBaseOffset == UnknownOffset) 0
+                                                else segmentNextOffset - batchBaseOffset,
+                            offsetTruncatedTo = if (batchBaseOffset != UnknownOffset) batchBaseOffset           /* Found the batch where offset to search resides */
+                                                else if (segmentNextOffset != UnknownOffset) segmentNextOffset  /* Non empty segment, but offset to search is not found */
+                                                else baseOffset                                                 /* Empty segment */)
   }
 
   /**

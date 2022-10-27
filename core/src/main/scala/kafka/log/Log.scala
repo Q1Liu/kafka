@@ -2022,16 +2022,38 @@ class Log(@volatile private var _dir: File,
         false
       } else {
         var bytesTruncated = 0L
+        var messagesTruncated = 0L
+        // logStartOffset/logEndOffset method may not be trustable here,
+        // as truncation works on batch boundary, and start is updated upon segment being rolled.
         val originalLogEndOffset = logEndOffset
+        var endOffsetAfterTruncation: Long = logEndOffset
         lock synchronized {
           checkIfMemoryMappedBufferClosed()
           if (segments.firstSegment.get.baseOffset > targetOffset) {
+            bytesTruncated = logSegments.map(_.size).sum
+            messagesTruncated = logEndOffset - logStartOffset
             truncateFullyAndStartAt(targetOffset)
-            bytesTruncated += logSegments.map(_.size).sum
+            endOffsetAfterTruncation = targetOffset
           } else {
-            val deletable = logSegments.filter(segment => segment.baseOffset > targetOffset)
+            val deletable = mutable.MutableList[LogSegment]()
+            // Use a null as a dummy so that sliding can touch all elements
+            (logSegments.toList ++ List[LogSegment](null)).sliding(2).foreach { case List(curr, next) =>
+              // While finding deletable segments, also capture # of messages in them
+              if (curr.baseOffset > targetOffset) {
+                // FIXME: For now, the calculation assumes segments have continuous offsets, as looking into the segment content can be too heavy.
+                val currEndOffset = if (next == null) originalLogEndOffset else next.baseOffset
+                messagesTruncated += currEndOffset - curr.baseOffset
+                deletable += curr
+              }
+            }
+
             bytesTruncated += removeAndDeleteSegments(deletable, asyncDelete = true, LogTruncation)
-            bytesTruncated += activeSegment.truncateTo(targetOffset)
+            // Note that activeSegment may not be the same segment as in the beginning of the method.
+            // Some newer segments may have already full removeAndDeleted, making a segment was previously in the middle the active segment
+            val activeSegmentTruncationInfo = activeSegment.truncateTo(targetOffset)
+            bytesTruncated += activeSegmentTruncationInfo.bytesTruncated
+            messagesTruncated += activeSegmentTruncationInfo.messagesTruncated
+            endOffsetAfterTruncation = activeSegmentTruncationInfo.offsetTruncatedTo
 
             leaderEpochCache.foreach(_.truncateFromEnd(targetOffset))
 
@@ -2041,9 +2063,9 @@ class Log(@volatile private var _dir: File,
               endOffset = targetOffset
             )
           }
-          val messagesTruncated = originalLogEndOffset - targetOffset
-          warn(s"Truncated to offset $targetOffset from the log end offset $originalLogEndOffset " +
-            s"with $messagesTruncated messages and $bytesTruncated bytes truncated")
+          // FIXME: this code path involves not only data plane segments but also KRaft metadata logs.  Should find a way to distinguish after moving to KRaft.
+          warn(s"Attempted truncating to offset $targetOffset from the original log end offset $originalLogEndOffset. " +
+            s"Resulting in new end offset $endOffsetAfterTruncation with $messagesTruncated messages and $bytesTruncated bytes truncated")
           LogTruncationStats.logTruncatedBytesRate.mark(bytesTruncated)
           LogTruncationStats.logTruncatedMessagesRate.mark(messagesTruncated)
           true
