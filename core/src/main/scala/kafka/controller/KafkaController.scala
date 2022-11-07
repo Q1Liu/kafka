@@ -1144,7 +1144,13 @@ class KafkaController(val config: KafkaConfig,
   private def updateLeaderAndIsrCache(partitions: Seq[TopicPartition]): Unit = {
     val zkPartitionRecurseStartMs = time.milliseconds()
     val leaderIsrAndControllerEpochs = zkClient.getTopicPartitionStates(partitions)  // 98.4% of method's time
-    if (partitions.size >= 1000) {
+    if (leaderIsrAndControllerEpochs.size != partitions.size) {
+      // This is a rare enough state that it's definitely anomalous, but line 1108 of KafkaZkClient.scala
+      // (getTopicPartitionStates() method) shows a response code of NONODE is possible and NOT
+      // exception-worthy, which means we should do no more than warn about it here.
+      warn(s"partition-level init (sequential): read ZK replica info for " +
+        s"${leaderIsrAndControllerEpochs.size} partitions but expected ${partitions.size} partitions (some partitions are likely missing their znodes)")
+    } else if (partitions.size >= 1000) {
       // We also get called via processIsrChangeNotification() and processAlterIsr(), typically with single-digit
       // batches but occasionally with up to 15% (or more?) of all partitions; tiny batches are just noise, but
       // batches of 1000 or more are both rare enough and slow enough that it's worth logging them, too.
@@ -1205,9 +1211,11 @@ class KafkaController(val config: KafkaConfig,
       // single-threaded updateLeaderAndIsrCache() does)
 
       if (leaderIsrAndControllerEpochs.size != partitions.size) {
-        // FIXME: should we throw, or should we log a warning and fall back to updateLeaderAndIsrCache()?
-        throw new IllegalStateException(s"Parallel controller startup failed: read ZK replica info for " +
-          s"${leaderIsrAndControllerEpochs.size} partitions but expected ${partitions.size} partitions")
+        // This is a rare enough state that it's definitely anomalous, but line 1108 of KafkaZkClient.scala
+        // (getTopicPartitionStates() method) shows a response code of NONODE is possible and NOT
+        // exception-worthy, which means we should do no more than warn about it here.
+        warn(s"partition-level init (parallel): read ZK replica info for " +
+          s"${leaderIsrAndControllerEpochs.size} partitions but expected ${partitions.size} partitions (some partitions are likely missing their znodes)")
       } else {
         debug(s"successfully read ZK replica info for ${leaderIsrAndControllerEpochs.size} partitions (expected number); updating LAI cache")
       }
