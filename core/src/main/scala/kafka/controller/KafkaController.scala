@@ -1146,15 +1146,19 @@ class KafkaController(val config: KafkaConfig,
     val leaderIsrAndControllerEpochs = zkClient.getTopicPartitionStates(partitions)  // 98.4% of method's time
     if (leaderIsrAndControllerEpochs.size != partitions.size) {
       // This is a rare enough state that it's definitely anomalous, but line 1108 of KafkaZkClient.scala
-      // (getTopicPartitionStates() method) shows a response code of NONODE is possible and NOT
-      // exception-worthy, which means we should do no more than warn about it here.
-      warn(s"partition-level init (sequential): read ZK replica info for " +
-        s"${leaderIsrAndControllerEpochs.size} partitions but expected ${partitions.size} partitions (some partitions are likely missing their znodes)")
-    } else if (partitions.size >= 1000) {
+      // (getTopicPartitionStates() method) shows a response code of NONODE is possible and NOT exception-
+      // worthy, which means we should do no more than warn about it here.
+      val zkPartitionSet = leaderIsrAndControllerEpochs.keySet
+      val expectedPartitionSet = partitions.toSet
+      warn(s"partition-level init (sequential): read ZK replica info for ${leaderIsrAndControllerEpochs.size} " +
+        s"partitions but expected ${partitions.size} partitions (some partitions are likely missing their znodes: " +
+        s"${expectedPartitionSet.diff(zkPartitionSet)})")
+    } else if (partitions.size >= 10000) {
       // We also get called via processIsrChangeNotification() and processAlterIsr(), typically with single-digit
-      // batches but occasionally with up to 15% (or more?) of all partitions; tiny batches are just noise, but
-      // batches of 1000 or more are both rare enough and slow enough that it's worth logging them, too.
-      // PERF TODO: investigate conditional invocation (e.g., only for batches of more than 5000 partitions) of
+      // batches but occasionally with up to 15% (or more?) of all partitions; tiny batches are just noise, and
+      // even batches of 1000-2000 are moderately frequent yet quite fast (< 50 ms), but batches of 10k or more
+      // are both rare enough and slow enough that it's worth logging them, too.
+      // PERF TODO: investigate conditional invocation (e.g., only for batches of more than 5-10k partitions) of
       //            updateLeaderAndIsrCacheParallel() via the two code paths above (but note thread-safety issue!)
       info(s"partition-level init (sequential): finished recursing ${partitions.size} partitions in ZK ${KafkaController.timing(zkPartitionRecurseStartMs, -1, time)}")
     }
@@ -1214,8 +1218,11 @@ class KafkaController(val config: KafkaConfig,
         // This is a rare enough state that it's definitely anomalous, but line 1108 of KafkaZkClient.scala
         // (getTopicPartitionStates() method) shows a response code of NONODE is possible and NOT
         // exception-worthy, which means we should do no more than warn about it here.
-        warn(s"partition-level init (parallel): read ZK replica info for " +
-          s"${leaderIsrAndControllerEpochs.size} partitions but expected ${partitions.size} partitions (some partitions are likely missing their znodes)")
+        val zkPartitionSet = leaderIsrAndControllerEpochs.keySet
+        val expectedPartitionSet = partitions.toSet
+        warn(s"partition-level init (parallel): read ZK replica info for ${leaderIsrAndControllerEpochs.size} " +
+          s"partitions but expected ${partitions.size} partitions (some partitions are likely missing their znodes: " +
+          s"${expectedPartitionSet.diff(zkPartitionSet)})")
       } else {
         debug(s"successfully read ZK replica info for ${leaderIsrAndControllerEpochs.size} partitions (expected number); updating LAI cache")
       }
