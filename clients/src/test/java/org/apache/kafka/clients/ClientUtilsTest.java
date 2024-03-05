@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.kafka.common.config.ConfigException;
@@ -111,6 +112,25 @@ public class ClientUtilsTest {
     @Ignore
     public void testResolveDnsLookupAllIps() throws UnknownHostException {
         assertTrue(ClientUtils.resolve("kafka.apache.org", ClientDnsLookup.USE_ALL_DNS_IPS).size() > 1);
+    }
+
+    @Test
+    public void testParseAndValidateAddressesDedupesErrors() {
+        int expectedNumberOfErrors = 1;
+        int actualNumberOfErrors = 0;
+        String expectedErrorMessage = "No resolvable bootstrap server in provided urls: ";
+
+        for (int i = 0; i < 10; i++) {
+            try {
+                ClientUtils.parseAndValidateAddresses(Collections.emptyList());
+            } catch (ConfigException e) {
+                assertEquals(expectedErrorMessage, e.getMessage());
+                actualNumberOfErrors++;
+            }
+        }
+
+        // Verify that only one error was thrown during the loop
+        assertEquals(expectedNumberOfErrors, actualNumberOfErrors);
     }
 
     private List<InetSocketAddress> checkWithoutLookup(String... url) {
